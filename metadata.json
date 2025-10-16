@@ -1,0 +1,5 @@
+{
+  "name": "SAAS-MCP-Orchestrator",
+  "description": "An AI-driven application that utilizes the Model Context Protocol (MCP) to generate, deploy, and verify functional SaaS applications based on user input, leveraging services like Vercel and Supabase.",
+  "requestFramePermissions": []
+}
