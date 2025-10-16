@@ -111,6 +111,7 @@ async function executeGithubCommand(
     executable: GITHUB_EXECUTABLE,
     args,
     env: {
+      ...process.env,
       MCP_GITHUB_TOKEN: GITHUB_TOKEN,
       MCP_GITHUB_REPO_OWNER: process.env.MCP_GITHUB_REPO_OWNER,
     },
