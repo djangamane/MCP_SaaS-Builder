@@ -79,6 +79,7 @@ export interface McpCommandOptions {
   mode?: McpExecutionMode;
   signal?: AbortSignal;
   simulateFailure?: boolean;
+  metadata?: Record<string, unknown>;
 }
 
 export interface McpCommandResult {

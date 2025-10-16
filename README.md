@@ -32,6 +32,18 @@ To build and run the full application locally, you will need the following:
 *   **Supabase Account**: An API key for managing databases and projects.
 *   (Optional) Keys for other services like Context7 if you choose to integrate them.
 
+### 3.3. Environment Variables
+Copy `.env.local.example` to `.env.local` and populate the following values before running in live mode:
+
+* `GEMINI_API_KEY` — Required for the Gemini orchestration strategy.
+* `ORCHESTRATION_STRATEGY` — Set to `simulated` or `gemini`.
+* `MCP_EXECUTION_MODE` — `dry-run` for safe simulations, `live` to execute real MCP commands.
+* `MCP_GITHUB_TOKEN` — GitHub PAT used by the GitHub MCP server.
+* `MCP_GITHUB_REPO_OWNER` — Username or organization where repositories should be created.
+* Optional overrides: `MCP_GITHUB_EXECUTABLE`, `MCP_GITHUB_SERVER`, `MCP_GITHUB_TOOLSETS`.
+
+> **Note:** The current GitHub MCP integration supports the `create_repository` and `push_files` tools. Ensure prompts include an explicit repository name so the orchestrator can satisfy the MCP schema.
+
 ## 4. Proposed Architecture & Design Implementation
 
 The functional application will shift from a client-only model to a client-server architecture. The frontend remains the user's window into the orchestration process, while a new backend service handles all the heavy lifting.

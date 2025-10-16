@@ -1,4 +1,5 @@
 import { logOrchestration } from '@/lib/logging';
+import { executeWithAdapter } from '@/lib/mcp/registry';
 import { McpCommandOptions, McpCommandRequest, McpCommandResult } from '@/types';
 
 const randomBetween = (min: number, max: number) =>
@@ -35,28 +36,10 @@ export async function executeMcpCommand(
     mode,
   });
 
-  try {
-    const delay = simulateFailure ? randomBetween(900, 1600) : randomBetween(400, 900);
-    await waitWithSignal(delay, signal);
-  } catch (error) {
-    const durationMs = Date.now() - startedAt;
-    const message = error instanceof Error ? error.message : 'Command aborted';
-    logOrchestration('warn', 'MCP command aborted', jobId, {
-      server: command.server,
-      action: command.action,
-      error: message,
-    });
-    return {
-      success: false,
-      error: message,
-      durationMs,
-      metadata: { mode, aborted: true },
-    };
-  }
-
-  const durationMs = Date.now() - startedAt;
-
   if (simulateFailure) {
+    const delay = randomBetween(400, 900);
+    await waitWithSignal(delay, signal);
+    const durationMs = Date.now() - startedAt;
     const error = `Simulated failure executing ${command.action} via ${command.server}`;
     logOrchestration('warn', 'MCP command failed', jobId, {
       server: command.server,
@@ -72,17 +55,62 @@ export async function executeMcpCommand(
     };
   }
 
-  const output = `Executed ${command.action} through ${command.server}`;
-  logOrchestration('info', 'MCP command succeeded', jobId, {
-    server: command.server,
-    action: command.action,
-    durationMs,
-  });
+  if (signal?.aborted) {
+    const durationMs = Date.now() - startedAt;
+    const message = 'Command aborted';
+    logOrchestration('warn', 'MCP command aborted', jobId, {
+      server: command.server,
+      action: command.action,
+      error: message,
+    });
+    return {
+      success: false,
+      error: message,
+      durationMs,
+      metadata: { mode, aborted: true },
+    };
+  }
 
-  return {
-    success: true,
-    output,
-    durationMs,
-    metadata: { mode },
-  };
+  try {
+    const result = await executeWithAdapter(command, options);
+    const durationMs = Date.now() - startedAt;
+
+    if (result.success) {
+      logOrchestration('info', 'MCP command succeeded', jobId, {
+        server: command.server,
+        action: command.action,
+        durationMs,
+      });
+      return {
+        ...result,
+        durationMs,
+      };
+    }
+
+    logOrchestration('error', 'MCP command failed', jobId, {
+      server: command.server,
+      action: command.action,
+      error: result.error,
+      durationMs,
+    });
+    return {
+      ...result,
+      durationMs,
+    };
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+    const message = error instanceof Error ? error.message : String(error);
+    logOrchestration('error', 'MCP adapter threw error', jobId, {
+      server: command.server,
+      action: command.action,
+      error: message,
+      durationMs,
+    });
+    return {
+      success: false,
+      error: message,
+      durationMs,
+      metadata: { mode, adapterError: true },
+    };
+  }
 }
