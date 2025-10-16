@@ -25,11 +25,14 @@ async function persistJob(job: OrchestrationJob) {
 async function loadJob(id: string): Promise<OrchestrationJob | undefined> {
   const redis = getRedisClient();
   if (redis) {
-    const raw = await redis.get<string>(jobKey(id));
+    const raw = await redis.get(jobKey(id));
     if (!raw) {
       return undefined;
     }
-    return JSON.parse(raw) as OrchestrationJob;
+    if (typeof raw === 'string') {
+      return JSON.parse(raw) as OrchestrationJob;
+    }
+    return raw as OrchestrationJob;
   }
 
   return jobs.get(id);
@@ -64,8 +67,14 @@ export async function listJobs(): Promise<OrchestrationJob[]> {
 
     const jobsFromRedis = await Promise.all(
       ids.map(async (id) => {
-        const raw = await redis.get<string>(jobKey(id));
-        return raw ? (JSON.parse(raw) as OrchestrationJob) : undefined;
+        const raw = await redis.get(jobKey(id));
+        if (!raw) {
+          return undefined;
+        }
+        if (typeof raw === 'string') {
+          return JSON.parse(raw) as OrchestrationJob;
+        }
+        return raw as OrchestrationJob;
       }),
     );
 

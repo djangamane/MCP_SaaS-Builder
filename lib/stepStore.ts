@@ -21,11 +21,14 @@ async function saveSteps(jobId: string, steps: OrchestrationStep[]) {
 async function loadSteps(jobId: string): Promise<OrchestrationStep[]> {
   const redis = getRedisClient();
   if (redis) {
-    const raw = await redis.get<string>(stepsKey(jobId));
+    const raw = await redis.get(stepsKey(jobId));
     if (!raw) {
       return [];
     }
-    return JSON.parse(raw) as OrchestrationStep[];
+    if (typeof raw === 'string') {
+      return JSON.parse(raw) as OrchestrationStep[];
+    }
+    return raw as OrchestrationStep[];
   }
 
   return jobSteps.get(jobId) ?? [];
