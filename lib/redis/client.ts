@@ -1,6 +1,7 @@
 import { Redis } from '@upstash/redis';
 
 let redisClient: Redis | null | undefined;
+let hasLoggedConfig = false;
 
 let hasLoggedConfig = false;
 
@@ -31,22 +32,24 @@ function resolveRedisConfig() {
 }
 
 export function getRedisClient(): Redis | null {
-  if (redisClient !== undefined) {
-    return redisClient;
+  if (typeof window !== 'undefined') {
+    // Never attempt to connect from the browser.
+    return null;
   }
 
-  const config = resolveRedisConfig();
-  if (!config) {
-    redisClient = null;
-    return redisClient;
+  if (redisClient === undefined) {
+    const config = resolveRedisConfig();
+    if (!config) {
+      redisClient = null;
+    } else {
+      redisClient = new Redis({
+        url: config.url,
+        token: config.token,
+      });
+    }
   }
 
-  redisClient = new Redis({
-    url: config.url,
-    token: config.token,
-  });
-
-  return redisClient;
+  return redisClient ?? null;
 }
 
 export function isRedisEnabled(): boolean {
