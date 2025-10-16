@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.13.0",
+    "@upstash/redis": "^1.31.5",
     "next": "^14.2.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"

@@ -37,7 +37,7 @@ function resolveStrategy(jobId: string): OrchestrationStrategy {
 }
 
 export async function runOrchestration(jobId: string) {
-  const job = getJob(jobId);
+  const job = await getJob(jobId);
   if (!job) {
     throw new Error(`Cannot start orchestration. Job ${jobId} not found.`);
   }
@@ -53,8 +53,9 @@ export async function runOrchestration(jobId: string) {
   });
 }
 
-export function getJobSnapshot(jobId: string) {
+export async function getJobSnapshot(jobId: string) {
+  const steps = await getJobSteps(jobId);
   return {
-    steps: getJobSteps(jobId),
+    steps,
   };
 }

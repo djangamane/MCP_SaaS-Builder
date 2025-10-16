@@ -12,7 +12,7 @@ export const simulatedStrategy: OrchestrationStrategy = {
   async run({ jobId, description }: OrchestrationContext) {
     logOrchestration('info', 'Starting orchestration job', jobId, { description });
 
-    updateJob(jobId, { status: 'running' });
+    await updateJob(jobId, { status: 'running' });
     broadcast({ type: 'job:started', jobId });
 
     const steps: OrchestrationStep[] = BASE_ORCHESTRATION_STEPS.map((step, index) => ({
@@ -20,7 +20,7 @@ export const simulatedStrategy: OrchestrationStrategy = {
       id: index,
       status: Status.Pending,
     }));
-    initializeJobSteps(jobId, steps);
+    await initializeJobSteps(jobId, steps);
 
     let nextStepId = steps.length;
     let hasInjectedRemediation = false;
@@ -35,7 +35,7 @@ export const simulatedStrategy: OrchestrationStrategy = {
         title: step.title,
         service: step.service,
       });
-      upsertJobStep(jobId, step);
+      await upsertJobStep(jobId, step);
       broadcast({
         type: 'step:update',
         jobId,
@@ -62,7 +62,7 @@ export const simulatedStrategy: OrchestrationStrategy = {
           title: step.title,
           error: commandResult.error,
         });
-        upsertJobStep(jobId, step);
+        await upsertJobStep(jobId, step);
 
         broadcast({
           type: 'step:update',
@@ -94,7 +94,7 @@ export const simulatedStrategy: OrchestrationStrategy = {
         nextStepId += 1;
 
         steps.push(diagnosisStep, fixStep);
-        appendJobSteps(jobId, [diagnosisStep, fixStep]);
+        await appendJobSteps(jobId, [diagnosisStep, fixStep]);
         logOrchestration('info', 'Appended remediation steps', jobId, {
           appendedStepIds: [diagnosisStep.id, fixStep.id],
         });
@@ -109,7 +109,7 @@ export const simulatedStrategy: OrchestrationStrategy = {
       }
 
       if (!commandResult.success) {
-        updateJob(jobId, { status: 'failed' });
+        await updateJob(jobId, { status: 'failed' });
         broadcast({ type: 'job:failed', jobId, error: commandResult.error });
         logOrchestration('error', 'Critical step failure', jobId, {
           stepId: step.id,
@@ -124,7 +124,7 @@ export const simulatedStrategy: OrchestrationStrategy = {
         stepId: step.id,
         title: step.title,
       });
-      upsertJobStep(jobId, step);
+      await upsertJobStep(jobId, step);
       broadcast({
         type: 'step:update',
         jobId,
@@ -135,7 +135,7 @@ export const simulatedStrategy: OrchestrationStrategy = {
         const remediationIndex = steps.findIndex((item) => item.id === remediationTargetId);
         if (remediationIndex !== -1) {
           steps[remediationIndex].status = Status.Success;
-          upsertJobStep(jobId, steps[remediationIndex]);
+          await upsertJobStep(jobId, steps[remediationIndex]);
           logOrchestration('info', 'Remediation step completed', jobId, {
             stepId: steps[remediationIndex].id,
             title: steps[remediationIndex].title,
@@ -150,7 +150,7 @@ export const simulatedStrategy: OrchestrationStrategy = {
       }
     }
 
-    updateJob(jobId, { status: 'completed' });
+    await updateJob(jobId, { status: 'completed' });
     broadcast({ type: 'job:completed', jobId });
     logOrchestration('info', 'Orchestration job completed', jobId, {
       totalSteps: steps.length,

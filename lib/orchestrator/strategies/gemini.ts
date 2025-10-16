@@ -132,6 +132,10 @@ async function generatePlan(description: string): Promise<GeminiPlannedStep[]> {
 export const geminiStrategy: OrchestrationStrategy = {
   name: 'gemini',
   async run({ jobId, description }: OrchestrationContext) {
+    logOrchestration('info', 'Starting orchestration job', jobId, { description });
+    await updateJob(jobId, { status: 'running' });
+    broadcast({ type: 'job:started', jobId });
+
     let plannedSteps: GeminiPlannedStep[];
     try {
       plannedSteps = await generatePlan(description);
@@ -152,7 +156,7 @@ export const geminiStrategy: OrchestrationStrategy = {
       status: Status.Pending,
     }));
 
-    initializeJobSteps(jobId, steps);
+    await initializeJobSteps(jobId, steps);
     steps.forEach((step) => {
       broadcast({
         type: 'step:update',
@@ -164,7 +168,7 @@ export const geminiStrategy: OrchestrationStrategy = {
     for (let index = 0; index < steps.length; index += 1) {
       const step = steps[index];
       step.status = Status.InProgress;
-      upsertJobStep(jobId, step);
+      await upsertJobStep(jobId, step);
       logOrchestration('info', 'Step started', jobId, {
         stepId: step.id,
         title: step.title,
@@ -194,7 +198,7 @@ export const geminiStrategy: OrchestrationStrategy = {
 
       if (!result.success) {
         step.status = Status.Failure;
-        upsertJobStep(jobId, step);
+        await upsertJobStep(jobId, step);
         logOrchestration('error', 'Step failed', jobId, {
           stepId: step.id,
           title: step.title,
@@ -206,7 +210,7 @@ export const geminiStrategy: OrchestrationStrategy = {
           step: { ...step },
         });
 
-        updateJob(jobId, { status: 'failed' });
+        await updateJob(jobId, { status: 'failed' });
         broadcast({
           type: 'job:failed',
           jobId,
@@ -216,7 +220,7 @@ export const geminiStrategy: OrchestrationStrategy = {
       }
 
       step.status = Status.Success;
-      upsertJobStep(jobId, step);
+      await upsertJobStep(jobId, step);
       logOrchestration('info', 'Step completed', jobId, {
         stepId: step.id,
         title: step.title,
@@ -229,7 +233,7 @@ export const geminiStrategy: OrchestrationStrategy = {
       });
     }
 
-    updateJob(jobId, { status: 'completed' });
+    await updateJob(jobId, { status: 'completed' });
     broadcast({ type: 'job:completed', jobId });
     logOrchestration('info', 'Orchestration job completed', jobId, {
       totalSteps: steps.length,

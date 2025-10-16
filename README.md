@@ -41,6 +41,7 @@ Copy `.env.local.example` to `.env.local` and populate the following values befo
 * `MCP_GITHUB_TOKEN` — GitHub PAT used by the GitHub MCP server.
 * `MCP_GITHUB_REPO_OWNER` — Username or organization where repositories should be created.
 * Optional overrides: `MCP_GITHUB_EXECUTABLE`, `MCP_GITHUB_SERVER`, `MCP_GITHUB_TOOLSETS`.
+* Redis persistence (recommended for production): `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
 
 > **Note:** The current GitHub MCP integration supports the `create_repository` and `push_files` tools. Ensure prompts include an explicit repository name so the orchestrator can satisfy the MCP schema.
 

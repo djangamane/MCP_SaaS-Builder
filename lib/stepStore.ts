@@ -1,34 +1,74 @@
+import { getRedisClient } from '@/lib/redis/client';
 import { OrchestrationStep } from '@/types';
 
 const jobSteps = new Map<string, OrchestrationStep[]>();
+const STEPS_KEY_PREFIX = 'mcp:jobSteps:';
+const STEPS_TTL_SECONDS = 60 * 60 * 24; // 24 hours
 
-export function initializeJobSteps(jobId: string, steps: OrchestrationStep[]) {
-  jobSteps.set(jobId, steps.map((step) => ({ ...step })));
+function stepsKey(jobId: string) {
+  return `${STEPS_KEY_PREFIX}${jobId}`;
 }
 
-export function upsertJobStep(jobId: string, step: OrchestrationStep) {
-  const existing = jobSteps.get(jobId) ?? [];
-  const index = existing.findIndex((item) => item.id === step.id);
-  if (index === -1) {
-    jobSteps.set(jobId, [...existing, { ...step }].sort((a, b) => a.id - b.id));
+async function saveSteps(jobId: string, steps: OrchestrationStep[]) {
+  const redis = getRedisClient();
+  if (redis) {
+    await redis.set(stepsKey(jobId), JSON.stringify(steps), { ex: STEPS_TTL_SECONDS });
   } else {
-    const copy = [...existing];
-    copy[index] = { ...copy[index], ...step };
-    jobSteps.set(jobId, copy);
+    jobSteps.set(jobId, steps);
   }
 }
 
-export function appendJobSteps(jobId: string, steps: OrchestrationStep[]) {
-  const existing = jobSteps.get(jobId) ?? [];
+async function loadSteps(jobId: string): Promise<OrchestrationStep[]> {
+  const redis = getRedisClient();
+  if (redis) {
+    const raw = await redis.get<string>(stepsKey(jobId));
+    if (!raw) {
+      return [];
+    }
+    return JSON.parse(raw) as OrchestrationStep[];
+  }
+
+  return jobSteps.get(jobId) ?? [];
+}
+
+export async function initializeJobSteps(jobId: string, steps: OrchestrationStep[]) {
+  const copy = steps.map((step) => ({ ...step }));
+  await saveSteps(jobId, copy);
+}
+
+export async function upsertJobStep(jobId: string, step: OrchestrationStep) {
+  const current = await loadSteps(jobId);
+  const index = current.findIndex((item) => item.id === step.id);
+  if (index === -1) {
+    current.push({ ...step });
+  } else {
+    current[index] = { ...current[index], ...step };
+  }
+
+  current.sort((a, b) => a.id - b.id);
+  await saveSteps(jobId, current);
+}
+
+export async function appendJobSteps(jobId: string, steps: OrchestrationStep[]) {
+  if (steps.length === 0) {
+    return;
+  }
+
+  const current = await loadSteps(jobId);
   const additions = steps.filter(
-    (step) => !existing.some((existingStep) => existingStep.id === step.id),
+    (step) => !current.some((existingStep) => existingStep.id === step.id),
   );
   if (additions.length === 0) {
     return;
   }
-  jobSteps.set(jobId, [...existing, ...additions.map((step) => ({ ...step }))].sort((a, b) => a.id - b.id));
+
+  const merged = [...current, ...additions.map((step) => ({ ...step }))].sort(
+    (a, b) => a.id - b.id,
+  );
+  await saveSteps(jobId, merged);
 }
 
-export function getJobSteps(jobId: string) {
-  return (jobSteps.get(jobId) ?? []).map((step) => ({ ...step }));
+export async function getJobSteps(jobId: string) {
+  const steps = await loadSteps(jobId);
+  return steps.map((step) => ({ ...step }));
 }

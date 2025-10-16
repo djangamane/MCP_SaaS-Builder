@@ -31,12 +31,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const job = createJob(description.trim());
+  const job = await createJob(description.trim());
   logOrchestration('info', 'Job queued', job.id, { description: job.description });
   broadcast({ type: 'job:queued', jobId: job.id, description: job.description });
 
-  runOrchestration(job.id).catch((error) => {
-    updateJob(job.id, { status: 'failed' });
+  runOrchestration(job.id).catch(async (error) => {
+    await updateJob(job.id, { status: 'failed' });
     logOrchestration('error', 'Job execution failed', job.id, {
       error: error instanceof Error ? error.message : String(error),
     });
@@ -50,5 +50,6 @@ export async function POST(request: Request) {
 }
 
 export async function GET() {
-  return NextResponse.json({ jobs: listJobs() });
+  const jobs = await listJobs();
+  return NextResponse.json({ jobs });
 }
