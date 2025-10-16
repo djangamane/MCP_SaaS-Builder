@@ -3,8 +3,6 @@ import { Redis } from '@upstash/redis';
 let redisClient: Redis | null | undefined;
 let hasLoggedConfig = false;
 
-let hasLoggedConfig = false;
-
 function resolveRedisConfig() {
   const url =
     process.env.UPSTASH_REDIS_REST_URL ||
