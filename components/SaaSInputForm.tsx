@@ -5,9 +5,16 @@ interface SaaSInputFormProps {
   setDescription: (value: string) => void;
   onSubmit: () => void;
   isLoading: boolean;
+  errorMessage?: string | null;
 }
 
-const SaaSInputForm: React.FC<SaaSInputFormProps> = ({ description, setDescription, onSubmit, isLoading }) => {
+const SaaSInputForm: React.FC<SaaSInputFormProps> = ({
+  description,
+  setDescription,
+  onSubmit,
+  isLoading,
+  errorMessage,
+}) => {
   return (
     <div className="bg-gray-800/50 p-6 rounded-lg border border-gray-700 shadow-lg">
       <h2 className="text-xl font-semibold text-white mb-4">1. Define Your SaaS Application</h2>
@@ -38,6 +45,11 @@ const SaaSInputForm: React.FC<SaaSInputFormProps> = ({ description, setDescripti
           'Generate SaaS Application'
         )}
       </button>
+      {errorMessage && (
+        <p className="mt-3 text-sm text-red-400" role="alert">
+          {errorMessage}
+        </p>
+      )}
     </div>
   );
 };
