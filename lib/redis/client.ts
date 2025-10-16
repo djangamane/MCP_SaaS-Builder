@@ -2,6 +2,8 @@ import { Redis } from '@upstash/redis';
 
 let redisClient: Redis | null | undefined;
 
+let hasLoggedConfig = false;
+
 function resolveRedisConfig() {
   const url =
     process.env.UPSTASH_REDIS_REST_URL ||
@@ -13,7 +15,16 @@ function resolveRedisConfig() {
     process.env.REDIS_SECRET;
 
   if (!url || !token) {
+    if (!hasLoggedConfig) {
+      console.warn('[Redis] No Redis configuration found; falling back to in-memory store.');
+      hasLoggedConfig = true;
+    }
     return null;
+  }
+
+  if (!hasLoggedConfig) {
+    console.info('[Redis] Redis configuration detected. Enabling persistence.');
+    hasLoggedConfig = true;
   }
 
   return { url, token };
